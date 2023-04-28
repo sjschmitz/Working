@@ -3,76 +3,77 @@
 #last update: 4.27.2023
 #
 #processes:
+#   import Excel file, extract USGS gage id
 #   query site data from nwis
 #   parse start/end dates
-#   import catalog
-#   write nwis objects into excel
+#   write to Excel file
 #   FACT CHECK!!
 ##########
 
 
 
-
+import re
 import requests
-import dataretrieval as nwis
+from dataretrieval import nwis
 import pandas as pd
-import openpyxl as py
-import numpy as np
+import openpyxl as px
 
 # Define file path, on local
-file_path = 'C:/Users/sjsch/Desktop/Streamflow/USGS_updated.xlsx'
+file_path = 'C:/Users/sjsch/Desktop/Kendra/Kyle_USGS.xlsx'
 print('Import success')
 
+workbook = px.open(file_path)
+wb = workbook.active
+counter = 0
+USGS_gage_id = []
+USGS_dict = {}
 
-#query nwis server and define specific objects of interest
-def get_measurement_dates(gage_number):
-    url = f"https://waterservices.usgs.gov/nwis/site/?format=json&sites={gage_number}"
-    response = requests.get(url)
+#function to extract dates in YYYY-MM-DD format out of cell
+def find_dates(string):
+    pattern = r"\d{4}-\d{2}-\d{2}"
+    dates = re.findall(pattern, string)
+    
+    if dates:
+        first_date = dates[0]
+        last_date = dates[-1]
+        return first_date, last_date
+    else:
+        return None, None
+    
+#retrieve USGS site id's from excel file
+for row in wb.iter_rows(min_col=1,max_col=1):
+    for cell in row:
+        var = str(cell.value).lower()
+        counter +=1
+        if var == 'usgs':
+            USGS_gage_id.append(wb.cell(counter,2).value)
+        else:
+            continue
 
-    try:
-        response.raise_for_status()  # Check for any HTTP errors
-        site_info = response.json()
+#query NWIS server with imported site id
+USGS_dat = []
+for val in USGS_gage_id:
+    site_id = str(val)
+    data = nwis.get_dv(sites=site_id,start='1900-01-01') #generic start date
+    USGS_dat.append(data)
+    dic = {val : data} #dictionary with site ID as key and array as value
+    USGS_dict.update(dic)
 
-        site_data = site_info['sites'][0]
-        parameter_group = site_data['parameterGroup']
-        parameter_group_info = next((group for group in parameter_group if group['name'] == 'Information'), None)
+#iterate through returned USGS arrays and use find_dates() to pull out first
+#and last recorded data and then write it to excel file
+counter = 0
+for row in wb.iter_rows(min_col=2,max_col=2):
+    for cell in row:
+        counter +=1
+        var = cell.value
+        if var in list(USGS_dict.keys()):
+            arr = str(USGS_dict.get(var))
+            arr = find_dates(arr)
+            wb.cell(counter,9).value = arr[0] #start date
+            wb.cell(counter,10).value = arr[1] #end date
+            print('Gage #%s started %s and ended %s' % (var, arr[0], arr[1]))
+        else:
+            print('skip %s' % var)
+            continue
 
-        oldest_measurement = parameter_group_info['beginDate']
-        most_recent_measurement = parameter_group_info['endDate']
-
-        measurement_dates = {'oldest_measurement': oldest_measurement, 'most_recent_measurement': most_recent_measurement}
-
-        return measurement_dates
-
-    except requests.exceptions.HTTPError as e:
-        print("HTTP Error:", e)
-    except requests.exceptions.JSONDecodeError as e:
-        print("JSON Decode Error:", e)
-
-    return None
-
-# Example usage
-gage_number = '11493500'
-measurement_dates = get_measurement_dates(gage_number)
-
-if measurement_dates is not None:
-    print("Oldest measurement date:", measurement_dates['oldest_measurement'])
-    print("Most recent measurement date:", measurement_dates['most_recent_measurement'])
-
-start_date_column = 'start_date'  # Replace with start date column name
-end_date_column = 'end_date'  # Replace with end date column name
-
-# Read the Excel file into a DataFrame
-df = pd.read_excel(file_path)
-
-# Iterate through the rows and find matching IDs
-for index, row in df.iterrows():
-    if row['ID'] == target_id:  # Replace 'ID' with actual column name
-        df.at[index, start_date_column] = '2023-01-01'  # Replace with start date
-        df.at[index, end_date_column] = '2023-12-31'  # Replace with end date
-
-# Save the modified DataFrame back to the Excel file
-df.to_excel(file_path, index=False)
-print("values written")
-print('saved')
-
+workbook.save('USGS_Updated.xlsx') #updated excel file with start and end dates
