@@ -1,17 +1,4 @@
-USGSquery_startend.py
-
-This code is designed to retrieve information about USGS gages, specifically their dates of operation. Gage ID numbers are provided to the NWIS server which 
-then returns arrays of all recorded data. The first and last date of record are extracted from this data.
-
-
-LIBRARIES
-
-https://github.com/DOI-USGS/dataretrieval-python/blob/master/dataretrieval/nwis.py
-
-https://openpyxl.readthedocs.io/en/stable/
-
-
-
+**Catalog_Master.py, Editing_Master.py**
 
 The following modules are necessary to successfully execute the catalog master codes. Below are the web sources
 as well as installation instruction through command prompt. Python 3.0 or greater is required. Code was
@@ -59,3 +46,18 @@ b) double check module was installed correctly:
 	$pip show matplotlib
 <show> command will show module name, version number, and file location. <package not found> will indicate
 the module didn't install correctly.
+
+	
+**USGSquery_startend.py**
+
+This code is designed to retrieve information about USGS gages, specifically their dates of operation. Gage ID numbers are provided to the NWIS server which 
+then returns arrays of all recorded data. The first and last date of record are extracted from this data.
+
+
+LIBRARIES
+
+https://github.com/DOI-USGS/dataretrieval-python/blob/master/dataretrieval/nwis.py
+
+https://openpyxl.readthedocs.io/en/stable/
+
+
